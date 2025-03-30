@@ -16,9 +16,14 @@
     <div class="game-container">
         <h1>WORDIE BLAST</h1>
         <div class="game-info">
-            Score: <span id="score">0</span>
-            Level: <span id="level">1</span>
-            Target: <span id="target">100</span>
+            <div class="score-container">
+                Score: <span id="score">0</span>
+                High Score: <span id="highScore">0</span>
+            </div>
+            <div class="level-container">
+                Level: <span id="level">1</span>
+                Target: <span id="target">100</span>
+            </div>
         </div>
         <div class="mode-selector">
             <button id="match3Mode" class="mode-btn active">Match-3</button>
@@ -36,7 +41,6 @@
         </div>
     </div>
     <script>
-        // Register service worker for PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js')
