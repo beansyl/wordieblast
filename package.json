@@ -1,0 +1,12 @@
+{
+  "name": "wordie-blast",
+  "version": "1.0.0",
+  "description": "Wordie Blast Game",
+  "scripts": {
+    "start": "serve public",
+    "build": "xcopy /E /I /Y public dist"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}
