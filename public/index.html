@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2f3042">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="description" content="A fun puzzle game combining match-3 and word mechanics">
+    <title>WORDIE BLAST</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>WORDIE BLAST</h1>
+        <div class="game-info">
+            Score: <span id="score">0</span>
+            Level: <span id="level">1</span>
+            Target: <span id="target">100</span>
+        </div>
+        <div class="mode-selector">
+            <button id="match3Mode" class="mode-btn active">Match-3</button>
+            <button id="fillMode" class="mode-btn">Fill Row/Column</button>
+            <button id="wordMode" class="mode-btn">Word Mode</button>
+        </div>
+        <div class="game-grid"></div>
+        <div class="shape-selection">
+            <div class="shape-container" id="shape1"></div>
+            <div class="shape-container" id="shape2"></div>
+            <div class="shape-container" id="shape3"></div>
+        </div>
+        <div class="game-instructions" id="gameInstructions">
+            Match 3 or more blocks of the same color to score points.
+        </div>
+    </div>
+    <script>
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => console.log('ServiceWorker registration successful'))
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+        }
+    </script>
+    <script src="game.js"></script>
+</body>
+</html>
