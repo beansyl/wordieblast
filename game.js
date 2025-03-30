@@ -8,7 +8,33 @@ class WordieBlast {
         this.colors = ['#FF69B4', '#FFD700', '#4169E1', '#32CD32', '#DA70D6'];
         this.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         this.shapes = [];
-        this.usedShapes = new Set(); // Track used shapes
+        this.usedShapes = new Set();
+
+        this.highScores = {
+            match3: parseInt(localStorage.getItem('highScore_match3')) || 0,
+            fill: parseInt(localStorage.getItem('highScore_fill')) || 0,
+            word: parseInt(localStorage.getItem('highScore_word')) || 0
+        };
+
+        this.scoringRules = {
+            match3: {
+                basePoints: 10,
+                comboMultiplier: 1.5,
+                target: 100
+            },
+            fill: {
+                basePoints: 20,
+                rowPoints: 50,
+                columnPoints: 50,
+                target: 150
+            },
+            word: {
+                basePoints: 25,
+                letterMultiplier: 1.2,
+                target: 200
+            }
+        };
+
         this.dictionary = ['CAT', 'DOG', 'RAT', 'BAT', 'HAT', 'MAT', 'SAT', 'FAT', 'PAT',
                           'RED', 'BED', 'LED', 'WED', 'FED',
                           'PEN', 'TEN', 'DEN', 'HEN', 'MEN',
@@ -31,8 +57,9 @@ class WordieBlast {
             sound.load();
             sound.volume = 0.5;
         });
-        
+
         this.initializeGame();
+        this.updateHighScoreDisplay();
     }
 
     initializeGame() {
@@ -43,8 +70,8 @@ class WordieBlast {
     }
 
     createGrid() {
-        const gridElement = document.querySelector('.game-grid');
-        gridElement.innerHTML = '';
+        const gameGrid = document.querySelector('.game-grid');
+        gameGrid.innerHTML = '';
         
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
@@ -52,100 +79,96 @@ class WordieBlast {
                 cell.className = 'grid-cell';
                 cell.dataset.row = i;
                 cell.dataset.col = j;
-                gridElement.appendChild(cell);
+                cell.style.backgroundColor = '#1a1b26';  // Set initial dark background
+                cell.addEventListener('click', () => this.handleCellClick(cell));
+                gameGrid.appendChild(cell);
             }
         }
     }
 
     generateShapes() {
-        const patterns = [
-            [[1, 1], [1, 1]], // 2x2 square
-            [[1, 1, 1]], // horizontal line
-            [[1], [1], [1]], // vertical line
-        ];
-
         this.shapes = [];
-        for (let i = 1; i <= 3; i++) {
-            const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+        for (let i = 0; i < 3; i++) {
             const color = this.colors[Math.floor(Math.random() * this.colors.length)];
-            const letters = pattern.map(row => 
-                row.map(() => this.letters[Math.floor(Math.random() * this.letters.length)])
-            );
-            const shape = { pattern, color, letters };
-            this.shapes.push(shape);
+            const pattern = this.generateRandomPattern();
+            const letters = this.currentMode === 'word' ? 
+                this.generateLetters(pattern) : null;
             
-            const container = document.getElementById(`shape${i}`);
-            container.innerHTML = '';
-            this.renderShape(pattern, color, letters, container);
+            this.shapes.push({ color, pattern, letters });
+            this.displayShape(i, { color, pattern, letters });
         }
     }
 
-    renderShape(pattern, color, letters, container) {
-        const shapeGrid = document.createElement('div');
-        shapeGrid.style.display = 'grid';
-        shapeGrid.style.gridTemplateColumns = `repeat(${pattern[0].length}, 30px)`;
-        shapeGrid.style.gap = '2px';
-        shapeGrid.style.justifyContent = 'center';
+    generateRandomPattern() {
+        const patterns = [
+            [[1, 1], [1, 1]],
+            [[1, 1, 1]],
+            [[1], [1], [1]],
+            [[1, 1], [1]],
+            [[1], [1, 1]]
+        ];
+        return patterns[Math.floor(Math.random() * patterns.length)];
+    }
+
+    generateLetters(pattern) {
+        return pattern.map(row => 
+            row.map(cell => 
+                cell ? this.letters[Math.floor(Math.random() * this.letters.length)] : ''
+            )
+        );
+    }
+
+    displayShape(index, shape) {
+        const container = document.getElementById(`shape${index + 1}`);
+        container.innerHTML = '';
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = `repeat(${shape.pattern[0].length}, 20px)`;
+        container.style.gap = '2px';
         
-        pattern.forEach((row, i) => {
+        shape.pattern.forEach((row, i) => {
             row.forEach((cell, j) => {
-                const div = document.createElement('div');
-                div.style.width = '30px';
-                div.style.height = '30px';
-                div.style.backgroundColor = cell ? color : 'transparent';
-                div.style.borderRadius = '4px';
-                
-                if (cell && this.currentMode === 'word') {
-                    div.textContent = letters[i][j];
-                    div.style.color = 'white';
-                    div.style.display = 'flex';
-                    div.style.alignItems = 'center';
-                    div.style.justifyContent = 'center';
-                    div.style.fontWeight = 'bold';
-                    div.style.fontSize = '16px';
+                if (cell) {
+                    const block = document.createElement('div');
+                    block.style.width = '20px';
+                    block.style.height = '20px';
+                    block.style.backgroundColor = shape.color;
+                    block.style.borderRadius = '2px';
+                    if (this.currentMode === 'word' && shape.letters) {
+                        block.textContent = shape.letters[i][j];
+                        block.style.color = 'white';
+                        block.style.display = 'flex';
+                        block.style.alignItems = 'center';
+                        block.style.justifyContent = 'center';
+                        block.style.fontSize = '12px';
+                        block.style.fontWeight = 'bold';
+                    }
+                    container.appendChild(block);
                 }
-                
-                shapeGrid.appendChild(div);
             });
         });
-        
-        container.appendChild(shapeGrid);
-        container.dataset.pattern = JSON.stringify(pattern);
-        container.dataset.color = color;
-        container.dataset.letters = JSON.stringify(letters);
+
+        container.addEventListener('click', () => this.selectShape(shape, index));
     }
 
     setupEventListeners() {
         document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.changeMode(btn.id.replace('Mode', ''));
+                const mode = btn.id.replace('Mode', '');
+                this.changeMode(mode);
             });
-        });
-
-        document.querySelectorAll('.shape-container').forEach(container => {
-            container.addEventListener('click', () => this.selectShape(container));
-        });
-
-        document.querySelector('.game-grid').addEventListener('click', (e) => {
-            if (e.target.classList.contains('grid-cell')) {
-                this.handleCellClick(e.target);
-            }
         });
     }
 
-    selectShape(container) {
-        if (!container.dataset.pattern || !container.dataset.color) return;
+    selectShape(shape, index) {
+        if (this.usedShapes.has(shape)) return;
+        
+        this.selectedShape = shape;
+        this.playSound('select');
         
         document.querySelectorAll('.shape-container').forEach(c => {
             c.style.border = '2px solid #2f3042';
         });
-        container.style.border = '2px solid #4169E1';
-        this.selectedShape = {
-            pattern: JSON.parse(container.dataset.pattern),
-            color: container.dataset.color,
-            letters: JSON.parse(container.dataset.letters)
-        };
-        this.playSound('select');
+        document.getElementById(`shape${index + 1}`).style.border = '2px solid #7aa2f7';
     }
 
     handleCellClick(cell) {
@@ -206,7 +229,10 @@ class WordieBlast {
         this.usedShapes.add(this.selectedShape);
         this.selectedShape = null;
         
-        // Only generate new shapes if all current shapes are used
+        document.querySelectorAll('.shape-container').forEach(c => {
+            c.style.border = '2px solid #2f3042';
+        });
+        
         if (this.usedShapes.size === 3) {
             this.usedShapes.clear();
             this.generateShapes();
@@ -215,12 +241,10 @@ class WordieBlast {
         this.checkMatches();
     }
 
-    // ... rest of the methods remain unchanged ...
     findMatches() {
         const matches = new Set();
 
         if (this.currentMode === 'match3') {
-            // Check horizontal matches
             for (let i = 0; i < 8; i++) {
                 for (let j = 0; j < 6; j++) {
                     if (this.grid[i][j] && 
@@ -233,7 +257,6 @@ class WordieBlast {
                 }
             }
 
-            // Check vertical matches
             for (let i = 0; i < 6; i++) {
                 for (let j = 0; j < 8; j++) {
                     if (this.grid[i][j] && 
@@ -247,7 +270,6 @@ class WordieBlast {
             }
         } 
         else if (this.currentMode === 'fill') {
-            // Check filled rows
             for (let i = 0; i < 8; i++) {
                 let rowFilled = true;
                 for (let j = 0; j < 8; j++) {
@@ -263,7 +285,6 @@ class WordieBlast {
                 }
             }
 
-            // Check filled columns
             for (let j = 0; j < 8; j++) {
                 let colFilled = true;
                 for (let i = 0; i < 8; i++) {
@@ -306,14 +327,12 @@ class WordieBlast {
                 words.add(letters.map(l => l.pos));
             }
 
-            // Check adjacent cells
-            getWord(row - 1, col, color, visited, [...letters]); // up
-            getWord(row + 1, col, color, visited, [...letters]); // down
-            getWord(row, col - 1, color, visited, [...letters]); // left
-            getWord(row, col + 1, color, visited, [...letters]); // right
+            getWord(row - 1, col, color, visited, [...letters]);
+            getWord(row + 1, col, color, visited, [...letters]);
+            getWord(row, col - 1, color, visited, [...letters]);
+            getWord(row, col + 1, color, visited, [...letters]);
         };
 
-        // Search for words starting from each cell
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
                 if (this.grid[i][j]) {
@@ -349,7 +368,7 @@ class WordieBlast {
         
         if (matches.length > 0) {
             this.playSound('match');
-            this.updateScore(matches.length * 10);
+            this.updateScore(matches.length);
             setTimeout(() => this.applyGravity(), 300);
         }
     }
@@ -398,18 +417,51 @@ class WordieBlast {
     }
 
     updateScore(points) {
+        const rules = this.scoringRules[this.currentMode];
+        let finalPoints = points;
+
+        switch(this.currentMode) {
+            case 'match3':
+                finalPoints *= rules.basePoints;
+                if (points > 3) finalPoints *= rules.comboMultiplier;
+                break;
+            case 'fill':
+                finalPoints = points * rules.basePoints;
+                break;
+            case 'word':
+                finalPoints = points * rules.basePoints * rules.letterMultiplier;
+                break;
+        }
+
         const oldLevel = this.level;
-        this.score += points;
+        this.score += Math.round(finalPoints);
         document.getElementById('score').textContent = this.score;
+        this.setHighScore(this.score);
         
-        const target = this.level * 100;
+        const target = rules.target * this.level;
         if (this.score >= target) {
             this.level++;
             document.getElementById('level').textContent = this.level;
-            document.getElementById('target').textContent = this.level * 100;
+            document.getElementById('target').textContent = rules.target * this.level;
             this.playSound('levelUp');
             setTimeout(() => {
                 alert(`Level ${oldLevel} completed! Moving to level ${this.level}`);
+            }, 300);
+        }
+    }
+
+    updateHighScoreDisplay() {
+        document.getElementById('highScore').textContent = this.highScores[this.currentMode];
+    }
+
+    setHighScore(score) {
+        if (score > this.highScores[this.currentMode]) {
+            this.highScores[this.currentMode] = score;
+            localStorage.setItem(`highScore_${this.currentMode}`, score);
+            this.updateHighScoreDisplay();
+            this.playSound('levelUp');
+            setTimeout(() => {
+                alert(`New High Score in ${this.currentMode} mode: ${score}!`);
             }, 300);
         }
     }
@@ -421,6 +473,10 @@ class WordieBlast {
         document.getElementById(`${mode}Mode`).classList.add('active');
         
         this.currentMode = mode;
+        this.score = 0;
+        document.getElementById('score').textContent = '0';
+        document.getElementById('target').textContent = this.scoringRules[mode].target;
+        this.updateHighScoreDisplay();
         this.resetGame();
         this.updateInstructions();
     }
