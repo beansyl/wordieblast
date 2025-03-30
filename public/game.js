@@ -79,6 +79,7 @@ class WordieBlast {
                 cell.className = 'grid-cell';
                 cell.dataset.row = i;
                 cell.dataset.col = j;
+                cell.style.backgroundColor = '#1a1b26';  // Set initial dark background
                 cell.addEventListener('click', () => this.handleCellClick(cell));
                 gameGrid.appendChild(cell);
             }
